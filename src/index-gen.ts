@@ -1,5 +1,4 @@
-import { Data, Effect } from "effect";
-import { Schema } from "effect";
+import { Data, Effect, Schema, Config } from "effect";
 
 class Pokemon extends Schema.Class<Pokemon>("Pokemon")({
   id: Schema.Number,
@@ -13,11 +12,15 @@ class Pokemon extends Schema.Class<Pokemon>("Pokemon")({
 class FetchError extends Data.TaggedError("FetchError")<{}> {}
 class JsonError extends Data.TaggedError("JsonError")<{}> {}
 
+/** Configuration **/
+const config = Config.string("BASE_URL");
+
 /** Implementation **/
-const fetchRequest = Effect.tryPromise({
-  try: () => fetch("https://pokeapi.co/api/v2/pokemon/garchomp/"),
-  catch: () => new FetchError(),
-});
+const fetchRequest = (baseUrl: string) =>
+  Effect.tryPromise({
+    try: () => fetch(`${baseUrl}/api/v2/pokemon/garchomp/`),
+    catch: () => new FetchError(),
+  });
 
 const jsonResponse = (response: Response) =>
   Effect.tryPromise({
@@ -29,7 +32,8 @@ const decodePokemon = Schema.decodeUnknown(Pokemon);
 
 /** Core implementation **/
 const program = Effect.gen(function* () {
-  const response = yield* fetchRequest;
+  const baseUrl = yield* config;
+  const response = yield* fetchRequest(baseUrl);
   if (!response.ok) {
     return yield* new FetchError();
   }
